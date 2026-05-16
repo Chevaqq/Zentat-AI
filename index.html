@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Zentazz AI</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body { background: #0a0a0a; color: #e0e0e0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        /* Header dengan Aksen Orange Neon */
+        .header { background: rgba(15, 15, 15, 0.7); border-bottom: 1px solid #ff6e00; padding: 15px; text-align: center; font-weight: bold; color: #ff6e00; font-size: 18px; letter-spacing: 1px; }
+        
+        /* Wadah Pesan Chat */
+        .chat-container { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; background: radial-gradient(circle at center, #111 0%, #050505 100%); }
+        
+        /* Balon Chat Premium Style */
+        .message { max-width: 80%; padding: 12px 16px; border-radius: 12px; font-size: 15px; line-height: 1.4; word-wrap: break-word; }
+        .user { background: #ff6e00; color: #fff; align-self: flex-end; border-bottom-right-radius: 2px; box-shadow: 0 2px 8px rgba(255, 110, 0, 0.3); }
+        .ai { background: rgba(25, 25, 25, 0.6); color: #e0e0e0; align-self: flex-start; border-bottom-left-radius: 2px; border: 1px solid rgba(255, 110, 0, 0.15); }
+        
+        /* Area Input Ketik di HP */
+        .input-area { padding: 12px; background: #0f0f0f; display: flex; gap: 8px; border-top: 1px solid #1a1a1a; }
+        input { flex: 1; background: #151515; border: 1px solid #252525; padding: 14px; color: #fff; border-radius: 8px; font-size: 15px; outline: none; transition: border-color 0.2s; }
+        input:focus { border-color: #ff6e00; }
+        button { background: #ff6e00; border: none; color: white; padding: 0 22px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; transition: background 0.2s; }
+        button:active { background: #e06100; }
+    </style>
+</head>
+<body>
+
+    <div class="header">ZENTAZZ AI SYSTEM</div>
+    <div class="chat-container" id="chatBox">
+        <div class="message ai">Halo bro! AI siap dipertanyakan. Mau nanya apa kita hari ini?</div>
+    </div>
+    <div class="input-area">
+        <input type="text" id="userInput" placeholder="Ketik pertanyaan teks di sini..." autocomplete="off">
+        <button onclick="sendMessage()">KIRIM</button>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById('chatBox');
+        const userInput = document.getElementById('userInput');
+        let chatHistory = [];
+
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            // Tampilkan pesan teks kiriman user ke layar
+            appendMessage(text, 'user');
+            userInput.value = '';
+
+            // Tampilkan indikator loading ketik sederhana
+            const loadingId = appendMessage('Mengetik...', 'ai');
+
+            try {
+                // Mengirim data obrolan ke backend Codespaces
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text, history: chatHistory })
+                });
+                const data = await response.json();
+                
+                // Hapus tulisan loading, ganti dengan jawaban asli dari AI
+                removeLoadingMessage(loadingId, data.reply);
+                
+                // Perbarui memori riwayat obrolan teks
+                chatHistory.push({ role: 'user', text: text });
+                chatHistory.push({ role: 'ai', text: data.reply });
+
+            } catch (error) {
+                removeLoadingMessage(loadingId, 'Gagal terhubung dengan server AI, bro.');
+            }
+        }
+
+        function appendMessage(text, sender) {
+            const msgDiv = document.createElement('div');
+            const uniqueId = 'msg-' + Date.now();
+            msgDiv.id = uniqueId;
+            msgDiv.className = `message ${sender}`;
+            msgDiv.innerText = text;
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            return uniqueId;
+        }
+
+        function removeLoadingMessage(id, realText) {
+            const targetEl = document.getElementById(id);
+            if (targetEl) {
+                targetEl.innerText = realText;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+        }
+
+        // Fungsi agar tombol Enter keyboard HP otomatis mengirim pesan
+        userInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
+    </script>
+</body>
+</html>
